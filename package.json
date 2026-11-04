@@ -1,0 +1,27 @@
+{
+  "name": "pdf-word-facil",
+  "version": "1.0.0",
+  "description": "Word a PDF y PDF a Word (con OCR), sin internet y sin anuncios",
+  "main": "main.js",
+  "author": "iDemoslink",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --publish never"
+  },
+  "dependencies": {
+    "mammoth": "^1.13.0"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.idemoslink.pdfwordfacil",
+    "productName": "PDF Word Facil",
+    "files": ["main.js", "preload.js", "core.js", "app.js", "index.html", "lib/**/*", "tessdata/**/*"],
+    "win": { "target": ["nsis", "portable"] },
+    "nsis": { "oneClick": true, "artifactName": "PDF-Word-Facil-Instalador-${version}.${ext}" },
+    "portable": { "artifactName": "PDF-Word-Facil-Portable-${version}.${ext}" }
+  }
+}
