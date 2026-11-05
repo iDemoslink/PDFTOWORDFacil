@@ -74,11 +74,32 @@ async function viaBasic(buf) {
   }
 }
 
-ipcMain.handle('info', () => ({ libreoffice: findSoffice() }));
+function cliPath() {
+  const name = process.platform === 'win32' ? 'pdf2docx-cli.exe' : 'pdf2docx-cli';
+  const c = [path.join(process.resourcesPath || '', 'bin', name), path.join(__dirname, 'bin', name)];
+  return c.find((p) => fs.existsSync(p)) || null;
+}
 
-ipcMain.handle('word-to-pdf', async (_e, { name, data, engine }) => {
+// PDF -> Word de alta fidelidad (tablas, imágenes, distribución) con pdf2docx.
+ipcMain.handle('pdf-to-docx', async (_e, { data }) => {
+  const cli = cliPath();
+  if (!cli) throw new Error('NO_ENGINE');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pdfword-'));
+  try {
+    const input = path.join(tmp, 'entrada.pdf');
+    const output = path.join(tmp, 'salida.docx');
+    fs.writeFileSync(input, Buffer.from(data));
+    await run(cli, [input, output], { timeout: 900000, windowsHide: true, maxBuffer: 200 * 1024 * 1024 });
+    if (!fs.existsSync(output)) throw new Error('El convertidor no generó el Word.');
+    return fs.readFileSync(output);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+ipcMain.handle('word-to-pdf', async (_e, { name, data }) => {
   const buf = Buffer.from(data);
-  const lo = engine === 'basic' ? null : findSoffice();
+  const lo = findSoffice();
   if (lo) {
     try { return { engine: 'LibreOffice', data: await viaLibreOffice(lo, name, buf) }; }
     catch (e) { if (!/\.docx$/i.test(name)) throw e; /* si falla, se intenta el motor básico */ }

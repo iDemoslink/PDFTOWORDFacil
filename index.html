@@ -6,11 +6,14 @@
 <title>PDF y Word Fácil</title>
 <style>
 :root{--bg:#f6f5f1;--card:#fff;--text:#1d1d1b;--muted:#6b6a64;--accent:#d9480f;--accent-t:#fff;--line:#e3e1da;--soft:#fbeee7}
-@media (prefers-color-scheme:dark){:root{--bg:#171716;--card:#232321;--text:#f0eee8;--muted:#a09e96;--accent:#ff7a3d;--accent-t:#1a1a18;--line:#35342f;--soft:#33251d}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171716;--card:#232321;--text:#f0eee8;--muted:#a09e96;--accent:#ff7a3d;--accent-t:#1a1a18;--line:#35342f;--soft:#33251d}}
+:root[data-theme="dark"]{--bg:#171716;--card:#232321;--text:#f0eee8;--muted:#a09e96;--accent:#ff7a3d;--accent-t:#1a1a18;--line:#35342f;--soft:#33251d}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Segoe UI",Roboto,sans-serif;line-height:1.4}
 main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
 h1{font-size:1.6rem;margin:6px 0 2px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#theme{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:1.3rem;cursor:pointer;flex:none}
 .sub{color:var(--muted);margin:0 0 18px}
 .tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .tab{padding:12px 6px;border-radius:16px;border:2px solid var(--line);background:var(--card);color:var(--text);font-size:.95rem;font-weight:600;cursor:pointer}
@@ -34,8 +37,9 @@ select{width:100%;padding:11px;border-radius:12px;border:1px solid var(--line);b
 </head>
 <body>
 <main>
-  <h1>PDF y Word Fácil</h1>
-  <p class="sub">Todo en tu equipo, sin anuncios y sin internet :D</p>
+  <div class="top"><div><h1>PDF y Word Fácil</h1>
+  <p class="sub">Todo en tu equipo, sin anuncios y sin internet :D</p></div>
+  <button id="theme" aria-label="Cambiar entre modo claro y oscuro">🌙</button></div>
 
   <div class="tabs" role="tablist">
     <button class="tab" id="t-w2p" role="tab" aria-selected="true"><span class="ic">📄</span>Word a PDF</button>
@@ -47,12 +51,6 @@ select{width:100%;padding:11px;border-radius:12px;border:1px solid var(--line);b
       <button class="pick" id="pick-w">+ Elige el documento de Word</button>
       <input type="file" id="in-w" accept=".docx,.doc,.odt,.rtf" hidden>
       <div class="fname" id="fn-w"></div>
-      <label class="q" for="eng">Motor</label>
-      <select id="eng">
-        <option value="auto">Automático (LibreOffice si lo tienes)</option>
-        <option value="basic">Básico (sin LibreOffice)</option>
-      </select>
-      <div class="note" id="eng-note"></div>
       <button class="go" id="go-w" disabled>Convertir a PDF</button>
     </section>
 
@@ -62,7 +60,7 @@ select{width:100%;padding:11px;border-radius:12px;border:1px solid var(--line);b
       <div class="fname" id="fn-p"></div>
       <label class="q" for="ocr">Reconocer texto (OCR)</label>
       <select id="ocr">
-        <option value="auto">Automático (solo en páginas escaneadas)</option>
+        <option value="auto">Automático (OCR solo si el PDF es escaneo)</option>
         <option value="always">Siempre (todas las páginas)</option>
         <option value="never">Nunca (solo texto que ya trae el PDF)</option>
       </select>
@@ -72,7 +70,7 @@ select{width:100%;padding:11px;border-radius:12px;border:1px solid var(--line);b
         <option value="spa">Español</option>
         <option value="eng">Inglés</option>
       </select>
-      <div class="note">Sale un Word editable con el texto y los títulos. Las tablas, columnas e imágenes no se conservan igual que en el original.</div>
+      <div class="note">Si el PDF trae texto, el Word conserva tablas, imágenes y la distribución lo más parecido posible. Si es un escaneo, se usa OCR y sale solo el texto, sin tablas ni imágenes.</div>
       <button class="go" id="go-p" disabled>Convertir a Word</button>
     </section>
 

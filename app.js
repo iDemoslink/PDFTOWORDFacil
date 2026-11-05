@@ -47,12 +47,6 @@
     say(''); refresh();
   });
 
-  window.api.info().then(function (i) {
-    $('eng-note').textContent = i.libreoffice
-      ? 'LibreOffice detectado: es el que da mejor calidad.'
-      : 'No encontré LibreOffice. Usaré el motor básico: sirve para documentos sencillos y solo abre .docx. Con LibreOffice instalado (gratis) queda mejor.';
-  });
-
   function baseName(n) { return n.replace(/\.[^.]+$/, ''); }
 
   async function saveAndReport(bytes, name, ext, extra) {
@@ -70,7 +64,7 @@
     setBusy(true); progress(null); $('open').style.display = 'none'; say('Convirtiendo…');
     try {
       var data = new Uint8Array(await fileW.arrayBuffer());
-      var r = await window.api.wordToPdf(fileW.name, data, $('eng').value);
+      var r = await window.api.wordToPdf(fileW.name, data);
       await saveAndReport(r.data, baseName(fileW.name) + '.pdf', 'pdf', 'Motor usado: ' + r.engine + '.');
     } catch (e) {
       say('Algo falló: ' + String((e && e.message) || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), true);
@@ -108,9 +102,31 @@
     var worker = null, doc = null;
     try {
       var data = new Uint8Array(await filePDF.arrayBuffer());
-      doc = await pdfjsLib.getDocument({ data: data, isEvalSupported: false }).promise;
+      doc = await pdfjsLib.getDocument({ data: data.slice(0), isEvalSupported: false }).promise;
       var mode = $('ocr').value, lang = $('lang').value, n = doc.numPages;
-      var pages = [], ocrPages = 0;
+      var pages = [], ocrPages = 0, aviso = '';
+
+      // ¿Cuántas páginas son escaneos (sin texto)?
+      var scanned = 0;
+      for (var k = 1; k <= n; k++) {
+        var pk = await doc.getPage(k), tk = await pk.getTextContent();
+        if (tk.items.reduce(function (t, it) { return t + (it.str || '').trim().length; }, 0) < 25) scanned++;
+        pk.cleanup();
+      }
+      // PDF con texto: motor de alta fidelidad (tablas, imágenes, distribución)
+      if (mode === 'never' || (mode === 'auto' && scanned === 0)) {
+        try {
+          say('Convirtiendo con alta fidelidad (tablas e imágenes)…\nPuede tardar en PDFs largos.'); progress(null);
+          var hq = await window.api.pdfToDocx(data);
+          await saveAndReport(hq, baseName(filePDF.name) + '.docx', 'docx', n + (n === 1 ? ' página' : ' páginas') + ' · modo alta fidelidad.');
+          if (doc) { try { doc.destroy(); } catch (e0) {} }
+          setBusy(false); return;
+        } catch (e1) {
+          aviso = /NO_ENGINE/.test(String(e1 && e1.message)) ? 'Nota: el motor de alta fidelidad no está disponible; se usó el modo de solo texto.' : 'Nota: el modo de alta fidelidad falló, se usó el modo de solo texto.';
+          progress(0);
+        }
+      }
+      if (scanned > 0 && mode === 'auto') aviso = 'Hay páginas escaneadas: se usó OCR en todo el documento (solo texto).';
       for (var i = 1; i <= n; i++) {
         progress((i - 1) / n);
         var page = await doc.getPage(i);
@@ -143,7 +159,7 @@
       var words = pages.reduce(function (t, p) { return t + p.reduce(function (s, q) { return s + q.text.split(/\s+/).length; }, 0); }, 0);
       var extra = n + (n === 1 ? ' página' : ' páginas') + ', ' + ocrPages + ' con OCR, unas ' + words + ' palabras.';
       if (!words) extra += '\nOjo: no encontré texto. Prueba con OCR en "Siempre".';
-      await saveAndReport(bytes, baseName(filePDF.name) + '.docx', 'docx', extra);
+      await saveAndReport(bytes, baseName(filePDF.name) + '.docx', 'docx', extra + (aviso ? '\n' + aviso : ''));
     } catch (e) {
       var m = String((e && e.message) || e);
       if (e && e.name === 'PasswordException') m = 'Este PDF pide contraseña para abrirlo.';
@@ -153,6 +169,19 @@
     if (doc) { try { doc.destroy(); } catch (e) {} }
     progress(null); setBusy(false);
   };
+
+  // ---------- Modo oscuro / claro ----------
+  var root = document.documentElement, tb = $('theme');
+  function isDark() { var t = root.getAttribute('data-theme'); return t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches; }
+  function paint() { tb.textContent = isDark() ? '☀️' : '🌙'; }
+  try { var saved = localStorage.getItem('pdfword-theme'); if (saved) root.setAttribute('data-theme', saved); } catch (e) {}
+  tb.onclick = function () {
+    var next = isDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('pdfword-theme', next); } catch (e) {}
+    paint();
+  };
+  paint();
 
   refresh();
 })();
